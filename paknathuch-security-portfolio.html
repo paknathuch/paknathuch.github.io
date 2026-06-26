@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CVE Report — Paknathuch</title>
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=VT323&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --matrix-green: #00ff41;
+      --matrix-cyan: #00e5ff;
+      --matrix-cyan-dim: #00b8cc;
+      --matrix-dark-cyan: #006b77;
+      --bg: #000000;
+      --card-bg: #030f0f;
+      --card-border: #00e5ff33;
+      --card-border-hover: #00e5ff88;
+      --text-main: #c0f0f0;
+      --text-dim: #4a8888;
+      --critical: #ff2244;
+      --high: #ff8800;
+      --medium: #ffdd00;
+      --solved: #00ff41;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text-main);
+      font-family: 'Share Tech Mono', 'Courier New', monospace;
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── Matrix Rain Canvas ── */
+    #matrix-canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      opacity: 0.12;
+      pointer-events: none;
+    }
+
+    /* ── Layout ── */
+    .page-wrap {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+
+    /* ── Header ── */
+    .header {
+      text-align: center;
+      padding-bottom: 48px;
+      border-bottom: 1px solid var(--matrix-dark-cyan);
+      margin-bottom: 48px;
+    }
+
+    .header .glitch-title {
+      font-family: 'VT323', monospace;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      color: var(--matrix-cyan);
+      letter-spacing: 0.1em;
+      text-shadow:
+        0 0 8px var(--matrix-cyan),
+        0 0 20px var(--matrix-cyan),
+        0 0 40px var(--matrix-dark-cyan);
+      animation: pulse-glow 3s ease-in-out infinite;
+      line-height: 1.1;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { text-shadow: 0 0 8px var(--matrix-cyan), 0 0 20px var(--matrix-cyan), 0 0 40px var(--matrix-dark-cyan); }
+      50% { text-shadow: 0 0 12px var(--matrix-cyan), 0 0 30px var(--matrix-cyan), 0 0 60px var(--matrix-dark-cyan); }
+    }
+
+    .header .subtitle {
+      font-size: 0.85rem;
+      color: var(--text-dim);
+      margin-top: 8px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .header .author-line {
+      margin-top: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid var(--matrix-dark-cyan);
+      padding: 8px 20px;
+      color: var(--matrix-cyan);
+      font-size: 0.9rem;
+      letter-spacing: 0.15em;
+      background: #001a1a;
+    }
+
+    .author-line::before { content: '> '; color: var(--matrix-green); }
+
+    .header .meta-row {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Summary Bar ── */
+    .summary-bar {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-bottom: 48px;
+      justify-content: center;
+    }
+
+    .stat-box {
+      flex: 1 1 160px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      padding: 16px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-box::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--matrix-cyan), transparent);
+    }
+
+    .stat-box .stat-num {
+      font-family: 'VT323', monospace;
+      font-size: 2.4rem;
+      color: var(--matrix-cyan);
+      text-shadow: 0 0 10px var(--matrix-cyan);
+    }
+
+    .stat-box .stat-label {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    /* ── Section Title ── */
+    .section-title {
+      font-family: 'VT323', monospace;
+      font-size: 1.5rem;
+      color: var(--matrix-cyan);
+      letter-spacing: 0.2em;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title::before { content: '//'; color: var(--matrix-green); }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: linear-gradient(90deg, var(--matrix-dark-cyan), transparent);
+    }
+
+    /* ── CVE Card ── */
+    .cve-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      margin-bottom: 36px;
+      position: relative;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    .cve-card:hover {
+      border-color: var(--card-border-hover);
+      box-shadow: 0 0 20px #00e5ff18, inset 0 0 40px #00e5ff04;
+    }
+
+    .cve-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .cve-card.critical::before { background: linear-gradient(90deg, transparent, var(--critical), transparent); }
+    .cve-card.high::before    { background: linear-gradient(90deg, transparent, var(--high), transparent); }
+    .cve-card.medium::before  { background: linear-gradient(90deg, transparent, var(--medium), transparent); }
+    .cve-card.solved::before  { background: linear-gradient(90deg, transparent, var(--solved), transparent); }
+
+    /* Card Header */
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 20px 24px;
+      border-bottom: 1px solid #00e5ff15;
+      flex-wrap: wrap;
+    }
+
+    .card-id {
+      font-family: 'VT323', monospace;
+      font-size: 1.6rem;
+      color: var(--matrix-cyan);
+      text-shadow: 0 0 8px var(--matrix-cyan);
+      letter-spacing: 0.05em;
+    }
+
+    .card-title {
+      font-size: 0.88rem;
+      color: #a0d8d8;
+      margin-top: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    .badge-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+      margin-top: 4px;
+    }
+
+    .badge {
+      font-size: 0.68rem;
+      font-weight: bold;
+      padding: 3px 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      border: 1px solid currentColor;
+    }
+
+    .badge.critical { color: var(--critical); border-color: var(--critical); text-shadow: 0 0 6px var(--critical); }
+    .badge.high     { color: var(--high); border-color: var(--high); }
+    .badge.medium   { color: var(--medium); border-color: var(--medium); }
+    .badge.solved   { color: var(--solved); border-color: var(--solved); text-shadow: 0 0 6px var(--solved); }
+    .badge.scope    { color: var(--matrix-cyan); border-color: var(--matrix-cyan); }
+    .badge.cvss     { color: #ffffff; border-color: #ffffff44; background: #ffffff10; }
+
+    /* Card Body */
+    .card-body { padding: 20px 24px; }
+
+    .card-body h4 {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin: 20px 0 8px;
+    }
+
+    .card-body h4:first-child { margin-top: 0; }
+
+    .card-body p {
+      font-size: 0.84rem;
+      color: var(--text-main);
+      line-height: 1.65;
+    }
+
+    /* Info Grid */
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .info-item {
+      background: #001818;
+      border-left: 2px solid var(--matrix-dark-cyan);
+      padding: 8px 12px;
+      font-size: 0.78rem;
+    }
+
+    .info-item .info-key {
+      color: var(--text-dim);
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .info-item .info-val { color: var(--matrix-cyan); margin-top: 2px; }
+
+    /* Services list */
+    .services-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 8px;
+    }
+
+    .service-tag {
+      font-size: 0.73rem;
+      color: var(--matrix-green);
+      border: 1px solid #00ff4133;
+      padding: 3px 10px;
+      background: #001a00;
+    }
+
+    /* Code block */
+    .code-block {
+      background: #000d0d;
+      border: 1px solid #00e5ff22;
+      border-left: 3px solid var(--matrix-cyan);
+      padding: 14px 16px;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 0.78rem;
+      color: var(--matrix-green);
+      overflow-x: auto;
+      white-space: pre;
+      line-height: 1.6;
+      margin-top: 8px;
+    }
+
+    .code-block .comment { color: var(--text-dim); }
+    .code-block .key     { color: var(--matrix-cyan); }
+    .code-block .val     { color: #ffdd00; }
+    .code-block .annotation { color: #ff8800; }
+
+    /* Fix steps */
+    .fix-steps {
+      counter-reset: step;
+      margin-top: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .fix-step {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .fix-step::before {
+      counter-increment: step;
+      content: counter(step, decimal-leading-zero);
+      font-family: 'VT323', monospace;
+      font-size: 1.2rem;
+      color: var(--matrix-cyan);
+      min-width: 28px;
+      line-height: 1.2;
+    }
+
+    .fix-step p { font-size: 0.82rem; color: var(--text-main); line-height: 1.6; }
+    .fix-step code {
+      background: #001818;
+      color: var(--matrix-green);
+      padding: 1px 6px;
+      border: 1px solid #00ff4122;
+      font-size: 0.78rem;
+    }
+
+    /* Status row */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px dashed #00e5ff18;
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--solved);
+      box-shadow: 0 0 6px var(--solved);
+      animation: blink 1.8s ease-in-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* ── Source footer ── */
+    .sources {
+      margin-top: 56px;
+      padding-top: 24px;
+      border-top: 1px solid var(--matrix-dark-cyan);
+    }
+
+    .sources h3 {
+      font-family: 'VT323', monospace;
+      font-size: 1.2rem;
+      color: var(--matrix-cyan);
+      letter-spacing: 0.2em;
+      margin-bottom: 12px;
+    }
+
+    .sources ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sources li::before { content: '> '; color: var(--matrix-green); }
+
+    .sources a {
+      color: var(--matrix-cyan-dim);
+      text-decoration: none;
+      font-size: 0.78rem;
+      letter-spacing: 0.04em;
+    }
+
+    .sources a:hover { color: var(--matrix-cyan); text-decoration: underline; }
+
+    /* ── Footer ── */
+    .footer {
+      margin-top: 48px;
+      text-align: center;
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      letter-spacing: 0.12em;
+      line-height: 1.8;
+    }
+
+    .footer span { color: var(--matrix-cyan); }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: var(--matrix-dark-cyan); border-radius: 0; }
+
+    /* ── Divider ── */
+    hr.matrix-hr {
+      border: none;
+      border-top: 1px dashed #00e5ff22;
+      margin: 16px 0;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="matrix-canvas"></canvas>
+
+<div class="page-wrap">
+
+  <!-- ══════ HEADER ══════ -->
+  <header class="header">
+    <div class="glitch-title">CVE SECURITY REPORT</div>
+    <div class="subtitle">Vulnerability Assessment &amp; Remediation</div>
+    <div class="author-line">PAKNATHUCH WATTANAMONGKOLCHOKE</div>
+    <div class="meta-row">
+      SCOPE: JAVA SPRING BOOT 3 &nbsp;|&nbsp; PERIOD: FEB 2026 – JUN 2026 &nbsp;|&nbsp; ROLE: SENIOR SOFTWARE ENGINEER
+    </div>
+  </header>
+
+  <!-- ══════ ABOUT ══════ -->
+  <div style="background:#030f0f;border:1px solid #00e5ff22;border-left:3px solid var(--matrix-cyan);padding:20px 24px;margin-bottom:48px;">
+    <div style="font-size:0.68rem;color:var(--text-dim);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:10px;">// About This Work</div>
+    <p style="font-size:0.84rem;color:var(--text-main);line-height:1.75;">
+      As a <strong style="color:var(--matrix-cyan)">Senior Java Developer</strong> on a microservices platform built with
+      <strong style="color:var(--matrix-cyan)">Java Spring Boot 3</strong> and deployed on Kubernetes,
+      I was responsible for identifying, analysing, and remediating critical CVEs surfaced by the team's
+      VA (Vulnerability Assessment) scans. This involved root-cause analysis against NVD and official vendor
+      advisories, implementing patches across <strong style="color:var(--matrix-cyan)">10+ microservices</strong>,
+      writing code changes, raising merge requests, and coordinating deployments through SIT and UAT environments.
+      All four CVEs below were fully resolved within their respective deadlines.
+    </p>
+    <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;">
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Java 21</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Spring Boot 3</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Spring Security 6</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Docker / Alpine</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Kubernetes</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">OpenSSL</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">Trivy / VA Scan</span>
+      <span style="font-size:0.7rem;border:1px solid #00e5ff33;color:var(--matrix-cyan);padding:3px 10px;">GitLab CI/CD</span>
+    </div>
+  </div>
+
+  <!-- ══════ SUMMARY ══════ -->
+  <div class="summary-bar">
+    <div class="stat-box">
+      <div class="stat-num">04</div>
+      <div class="stat-label">CVEs Tracked</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--critical)">01</div>
+      <div class="stat-label">Critical</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--medium)">03</div>
+      <div class="stat-label">Medium / High</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num" style="color:var(--solved)">04</div>
+      <div class="stat-label">Resolved</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-num">10+</div>
+      <div class="stat-label">Microservices Fixed</div>
+    </div>
+  </div>
+
+  <!-- ══════ CVE LIST ══════ -->
+  <div class="section-title">CVE RECORDS</div>
+
+  <!-- ─── CVE-2025-41232 ─── -->
+  <article class="cve-card critical">
+    <div class="card-header">
+      <div>
+        <div class="card-id">CVE-2025-41232</div>
+        <div class="card-title">Spring Security — Authorization Bypass on Private Method Annotations</div>
+      </div>
+      <div class="badge-group">
+        <span class="badge critical">Critical</span>
+        <span class="badge cvss">CVSS 9.1</span>
+        <span class="badge scope">Spring Security</span>
+        <span class="badge solved">✔ Resolved</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h4>What Is This?</h4>
+      <p>
+        Disclosed <strong>19 May 2025</strong>, this vulnerability exists in <strong>Spring Security Aspects</strong>.
+        When <code>@EnableMethodSecurity(mode=ASPECTJ)</code> is active, the AspectJ weaver fails to
+        locate and enforce method-security annotations (<code>@PreAuthorize</code>, <code>@PostAuthorize</code>,
+        <code>@Secured</code>) placed on <strong>private methods</strong>. As a result, those private
+        methods can be invoked <em>without</em> satisfying their declared authorization rules —
+        a protection-mechanism failure (CWE-693).
+      </p>
+
+      <hr class="matrix-hr">
+
+      <h4>Affected Conditions</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Affected Versions</div>
+          <div class="info-val">Spring Security 6.4.0 – 6.4.5</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Requires</div>
+          <div class="info-val">AspectJ mode + spring-security-aspects</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">CVSS v3.1</div>
+          <div class="info-val" style="color:var(--critical)">9.1 / Critical</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Picked Up</div>
+          <div class="info-val">Wed 25 Feb 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Jira</div>
+          <div class="info-val">[Internal Tickets]</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deployed</div>
+          <div class="info-val">Staging &amp; Pre-Production — 5 May 2026</div>
+        </div>
+      </div>
+
+      <hr class="matrix-hr">
+
+      <h4>How to Fix (Spring Boot 3)</h4>
+      <div class="fix-steps">
+        <div class="fix-step">
+          <p>Upgrade <code>spring-security-bom</code> to <strong>6.4.6</strong> or later in your
+          <code>pom.xml</code> / <code>build.gradle</code>. Spring Boot 3.4.x manages this transitively
+          via the BOM — bump the Boot parent version to pick it up automatically.</p>
+        </div>
+        <div class="fix-step">
+          <p>If you are using <code>@EnableMethodSecurity(mode=ASPECTJ)</code>, migrate security
+          annotations from private methods to package-private, protected, or public methods.
+          AspectJ cannot weave private methods; the fix also enforces this at the framework level.</p>
+        </div>
+        <div class="fix-step">
+          <p>Verify the fix by running your security integration tests. Confirm that a call to a
+          formerly-private annotated method without the correct role now throws
+          <code>AccessDeniedException</code>.</p>
+        </div>
+      </div>
+
+      <h4>pom.xml Snippet</h4>
+      <div class="code-block"><span class="comment">&lt;!-- Spring Boot parent – pulls Spring Security 6.4.6+ --&gt;</span>
+<span class="key">&lt;parent&gt;</span>
+  <span class="key">&lt;groupId&gt;</span>org.springframework.boot<span class="key">&lt;/groupId&gt;</span>
+  <span class="key">&lt;artifactId&gt;</span>spring-boot-starter-parent<span class="key">&lt;/artifactId&gt;</span>
+  <span class="key">&lt;version&gt;</span><span class="val">3.4.6</span><span class="key">&lt;/version&gt;</span>
+<span class="key">&lt;/parent&gt;</span>
+
+<span class="comment">&lt;!-- Or pin directly if not using Boot parent --&gt;</span>
+<span class="key">&lt;dependency&gt;</span>
+  <span class="key">&lt;groupId&gt;</span>org.springframework.security<span class="key">&lt;/groupId&gt;</span>
+  <span class="key">&lt;artifactId&gt;</span>spring-security-aspects<span class="key">&lt;/artifactId&gt;</span>
+  <span class="key">&lt;version&gt;</span><span class="val">6.4.6</span><span class="key">&lt;/version&gt;</span>
+<span class="key">&lt;/dependency&gt;</span></div>
+
+      <div class="status-row">
+        <div class="status-dot"></div>
+        RESOLVED — Deployed to Staging &amp; Pre-Production on 5 May 2026
+      </div>
+    </div>
+  </article>
+
+  <!-- ─── CVE-2025-48174 ─── -->
+  <article class="cve-card high">
+    <div class="card-header">
+      <div>
+        <div class="card-id">CVE-2025-48174</div>
+        <div class="card-title">BusyBox — Stack Overflow / Heap Corruption in Container Base Image</div>
+      </div>
+      <div class="badge-group">
+        <span class="badge high">High</span>
+        <span class="badge scope">BusyBox / Docker</span>
+        <span class="badge solved">✔ Resolved</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h4>What Is This?</h4>
+      <p>
+        BusyBox is the tiny Unix toolset bundled inside most Alpine Linux–based Docker images (including
+        <code>eclipse-temurin:21-jre-alpine</code> commonly used in Spring Boot microservices).
+        This vulnerability class — consistent with the well-documented <strong>CVE-2022-48174</strong>
+        pattern — describes a <strong>stack overflow in BusyBox <code>ash</code> shell</strong>
+        (<code>ash.c</code>) that can lead to arbitrary code execution or denial of service when
+        a crafted input is processed inside the container. In containerised Spring Boot apps the
+        shell is typically used for readiness/liveness probe scripts and init scripts in Kubernetes.
+      </p>
+
+      <hr class="matrix-hr">
+
+      <h4>Affected Conditions</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Affected</div>
+          <div class="info-val">BusyBox &lt; 1.36.1 (Alpine &lt; 3.18.4)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Vector</div>
+          <div class="info-val">Container shell / init scripts</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Picked Up</div>
+          <div class="info-val">Tue 28 Apr 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Jira</div>
+          <div class="info-val">[Internal Ticket]</div>
+        </div>
+      </div>
+
+      <hr class="matrix-hr">
+
+      <h4>How to Fix (Spring Boot 3 / Docker)</h4>
+      <div class="fix-steps">
+        <div class="fix-step">
+          <p>Update your <code>Dockerfile</code> base image to an Alpine version that ships
+          BusyBox ≥ 1.36.1. For JRE 21 that means switching to <code>eclipse-temurin:21-jre-alpine</code>
+          rebuilt on Alpine 3.19+ or the Temurin tag that pulls a patched layer.</p>
+        </div>
+        <div class="fix-step">
+          <p>Run <code>docker build --no-cache</code> to force a fresh pull of the base layer —
+          cached layers may still contain the vulnerable BusyBox binary.</p>
+        </div>
+        <div class="fix-step">
+          <p>Add a Trivy / Grype scan step to your CI pipeline to catch future base-image CVEs
+          before they reach SIT/UAT. Example: <code>trivy image --exit-code 1 --severity HIGH,CRITICAL myimage:tag</code></p>
+        </div>
+      </div>
+
+      <h4>Dockerfile Snippet</h4>
+      <div class="code-block"><span class="comment"># Use a patched Alpine-based JRE image</span>
+<span class="key">FROM</span> <span class="val">eclipse-temurin:21.0.5_11-jre-alpine</span>
+
+<span class="comment"># Verify BusyBox version inside image</span>
+<span class="key">RUN</span> busybox --help | head -1
+<span class="comment"># Should output: BusyBox v1.36.1 or higher</span>
+
+<span class="key">COPY</span> target/app.jar /app/app.jar
+<span class="key">ENTRYPOINT</span> [<span class="val">"java"</span>, <span class="val">"-jar"</span>, <span class="val">"/app/app.jar"</span>]</div>
+
+      <div class="status-row">
+        <div class="status-dot"></div>
+        RESOLVED — Base image updated and redeployed across affected services
+      </div>
+    </div>
+  </article>
+
+  <!-- ─── CVE-2026-22732 ─── -->
+  <article class="cve-card medium">
+    <div class="card-header">
+      <div>
+        <div class="card-id">CVE-2026-22732</div>
+        <div class="card-title">Spring Security — HTTP Security Headers Silently Dropped</div>
+      </div>
+      <div class="badge-group">
+        <span class="badge medium">Medium</span>
+        <span class="badge cvss">CVSS 7.5</span>
+        <span class="badge scope">Spring Security</span>
+        <span class="badge solved">✔ Resolved</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h4>What Is This?</h4>
+      <p>
+        Spring Security writes security response headers lazily by default — it waits until just
+        before the response is committed. However, when a Spring MVC controller writes to
+        <code>response.getOutputStream()</code>, calls <code>response.flushBuffer()</code>,
+        or sets <code>Content-Length</code> via <code>setIntHeader()</code>, the servlet container
+        commits the response <em>before</em> Spring Security's <code>HeaderWriterFilter</code> can
+        inject its headers. The result: critical headers such as
+        <code>Cache-Control</code>, <code>X-Content-Type-Options</code>, <code>X-Frame-Options</code>,
+        <code>Strict-Transport-Security</code>, and <code>Content-Security-Policy</code> are
+        silently omitted — leaving the browser without its security guardrails.
+      </p>
+
+      <hr class="matrix-hr">
+
+      <h4>Affected Versions</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Affected</div>
+          <div class="info-val">6.3.0–6.3.14 / 6.4.0–6.4.14 / 6.5.0–6.5.8</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Fixed In</div>
+          <div class="info-val">6.3.15 / 6.4.15 / 6.5.9 / 7.0.4</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Picked Up</div>
+          <div class="info-val">Tue 28 Apr 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deployed</div>
+          <div class="info-val">Staging &amp; Pre-Production — 5 May 2026</div>
+        </div>
+      </div>
+
+      <h4>Affected Microservices</h4>
+      <div class="services-grid">
+        <span class="service-tag">identity-verification-service</span>
+        <span class="service-tag">data-extraction-service</span>
+        <span class="service-tag">customer-onboarding-service</span>
+        <span class="service-tag">master-data-service</span>
+      </div>
+
+      <hr class="matrix-hr">
+
+      <h4>How to Fix (Spring Boot 3)</h4>
+      <div class="fix-steps">
+        <div class="fix-step">
+          <p><strong>Preferred — upgrade</strong>: bump Spring Boot to a version that pulls
+          Spring Security 6.4.15 or later. This is the permanent fix.</p>
+        </div>
+        <div class="fix-step">
+          <p><strong>Workaround (if you cannot upgrade immediately)</strong>: force eager header
+          writing via a <code>SecurityFilterChain</code> customisation:</p>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="annotation">@Configuration</span>
+<span class="annotation">@EnableWebSecurity</span>
+<span class="key">public class</span> SecurityConfig {
+
+    <span class="annotation">@Bean</span>
+    <span class="key">public</span> SecurityFilterChain filterChain(HttpSecurity http) <span class="key">throws</span> Exception {
+        http
+            .headers(headers -> headers
+                <span class="comment">// Force headers to be written BEFORE response commits</span>
+                .frameOptions(frame -> frame.deny())
+                .contentTypeOptions(Customizer.withDefaults())
+                .httpStrictTransportSecurity(hsts -> hsts
+                    .includeSubDomains(<span class="val">true</span>).maxAgeInSeconds(<span class="val">31536000</span>))
+            );
+        <span class="key">return</span> http.build();
+    }
+
+    <span class="annotation">@Bean</span>
+    <span class="key">public</span> HeaderWriterFilter headerWriterFilter(HeadersConfigurer.&lt;?&gt; config) {
+        HeaderWriterFilter filter = <span class="key">new</span> HeaderWriterFilter(config.getHeaderWriters());
+        filter.setShouldWriteHeadersEagerly(<span class="val">true</span>); <span class="comment">// &lt;-- key fix</span>
+        <span class="key">return</span> filter;
+    }
+}</div>
+
+      <h4>Deployment Summary</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Services Patched</div>
+          <div class="info-val">4 microservices</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Environments</div>
+          <div class="info-val">Staging &amp; Pre-Production</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deployment Date</div>
+          <div class="info-val">5 May 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Merge Requests</div>
+          <div class="info-val">3 MRs merged &amp; approved</div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="status-dot"></div>
+        RESOLVED — 4 microservices patched &amp; deployed to Staging and Pre-Production on 5 May 2026
+      </div>
+    </div>
+  </article>
+
+  <!-- ─── CVE-2026-31789 ─── -->
+  <article class="cve-card solved">
+    <div class="card-header">
+      <div>
+        <div class="card-id">CVE-2026-31789</div>
+        <div class="card-title">OpenSSL — Heap Buffer Overflow in X.509 Certificate Processing</div>
+      </div>
+      <div class="badge-group">
+        <span class="badge high">High</span>
+        <span class="badge scope">OpenSSL / Container</span>
+        <span class="badge solved">✔ Resolved</span>
+      </div>
+    </div>
+    <div class="card-body">
+
+      <h4>What Is This?</h4>
+      <p>
+        CVE-2026-31789 is a <strong>heap buffer overflow in OpenSSL</strong> that occurs when processing
+        <strong>X.509 certificates</strong> containing oversized <code>OCTET STRING</code> values in
+        extensions such as Subject Key Identifier (SKID) or Authority Key Identifier (AKID).
+        The root cause is an integer multiplication overflow during buffer-size calculation on
+        <strong>32-bit platforms</strong>, which allocates an undersized buffer and subsequently
+        corrupts the heap. Exploitation against a 64-bit system requires a crafted certificate chain
+        delivered to a vulnerable TLS endpoint. In Spring Boot microservices this manifests through
+        embedded HTTP clients (<code>RestTemplate</code>, <code>WebClient</code>, <code>Feign</code>)
+        or mutual-TLS configurations that process untrusted certificates.
+      </p>
+
+      <hr class="matrix-hr">
+
+      <h4>Affected Conditions</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Component</div>
+          <div class="info-val">OpenSSL (via container base image)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Risk Platform</div>
+          <div class="info-val">32-bit; 64-bit lower risk but patch anyway</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Picked Up</div>
+          <div class="info-val">Thu 4 Jun 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Release Strategy</div>
+          <div class="info-val">Cherry-pick onto monthly release branch</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deadline</div>
+          <div class="info-val">June 2026 release</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deployed</div>
+          <div class="info-val">Pre-Production — Wed 10 Jun 2026</div>
+        </div>
+      </div>
+
+      <h4>Affected Microservices</h4>
+      <div class="services-grid">
+        <span class="service-tag">data-extraction-service</span>
+        <span class="service-tag">identity-verification-service</span>
+        <span class="service-tag">customer-onboarding-service</span>
+        <span class="service-tag">kyc-service</span>
+        <span class="service-tag">core-validation-service</span>
+        <span class="service-tag">auth-service</span>
+        <span class="service-tag">session-service</span>
+        <span class="service-tag">device-service</span>
+        <span class="service-tag">installment-service</span>
+        <span class="service-tag">transfer-service</span>
+      </div>
+
+      <hr class="matrix-hr">
+
+      <h4>How to Fix (Spring Boot 3 / Container)</h4>
+      <div class="fix-steps">
+        <div class="fix-step">
+          <p><strong>Update the container base image</strong> to one shipping a patched OpenSSL.
+          Alpine-based images: pull an Alpine ≥ 3.19.x tag; Debian-based: pull Debian Bookworm
+          with updated <code>libssl</code>.</p>
+        </div>
+        <div class="fix-step">
+          <p>Use a <strong>64-bit JRE base image</strong> (e.g., <code>eclipse-temurin:21-jre-jammy</code>
+          on amd64). The integer overflow path is only exploitable on 32-bit address spaces.</p>
+        </div>
+        <div class="fix-step">
+          <p>If your services call external TLS endpoints, add <strong>certificate validation limits</strong>
+          in your HTTP client config to reject certificates with abnormally large extension values.</p>
+        </div>
+        <div class="fix-step">
+          <p>Cherry-pick the patched Helm chart values onto the monthly release branch, rebuild images,
+          and redeploy. Verify the fix with <code>openssl version</code> inside the running pod.</p>
+        </div>
+      </div>
+
+      <div class="code-block"><span class="comment"># Verify OpenSSL version inside a running pod</span>
+<span class="key">kubectl</span> exec -it &lt;pod-name&gt; -- openssl version
+<span class="comment"># Expected: OpenSSL 3.x.x (patched build date post CVE-2026-31789)</span>
+
+<span class="comment"># Trivy scan on final image before push</span>
+<span class="key">trivy</span> image \
+  --exit-code 1 \
+  --severity HIGH,CRITICAL \
+  --ignore-unfixed \
+  <span class="val">myrepo/my-service:latest</span></div>
+
+      <h4>Deployment Summary (10 Jun 2026)</h4>
+      <div class="info-grid">
+        <div class="info-item">
+          <div class="info-key">Services Patched</div>
+          <div class="info-val">10 microservices</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Environment</div>
+          <div class="info-val">Pre-Production</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Deployment Date</div>
+          <div class="info-val">10 Jun 2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-key">Merge Requests</div>
+          <div class="info-val">2 MRs merged &amp; approved</div>
+        </div>
+      </div>
+
+      <div class="status-row">
+        <div class="status-dot"></div>
+        RESOLVED — 10 microservices patched &amp; deployed to Pre-Production on 10 Jun 2026
+      </div>
+    </div>
+  </article>
+
+  <!-- ══════ SOURCES ══════ -->
+  <div class="sources">
+    <h3>// SOURCES</h3>
+    <ul>
+      <li><a href="https://spring.io/security/cve-2025-41232/" target="_blank">spring.io — CVE-2025-41232: Spring Security Authorization Bypass (Official Advisory)</a></li>
+      <li><a href="https://nvd.nist.gov/vuln/detail/cve-2025-41232" target="_blank">nvd.nist.gov — CVE-2025-41232 Detail (NVD)</a></li>
+      <li><a href="https://github.com/advisories/GHSA-9pp5-9c7g-4r83" target="_blank">github.com — GHSA-9pp5-9c7g-4r83 Advisory Database</a></li>
+      <li><a href="https://spring.io/security/cve-2026-22732/" target="_blank">spring.io — CVE-2026-22732: Spring Security HTTP Headers Not Written (Official Advisory)</a></li>
+      <li><a href="https://www.herodevs.com/blog-posts/cve-2026-22732-spring-security-silently-drops-http-security-headers" target="_blank">herodevs.com — CVE-2026-22732: Spring Security Silently Drops HTTP Security Headers</a></li>
+      <li><a href="https://github.com/semgrep/cve-2026-22732-demo" target="_blank">github.com/semgrep — CVE-2026-22732 Reproduction Demo</a></li>
+      <li><a href="https://www.sentinelone.com/vulnerability-database/cve-2026-31789/" target="_blank">sentinelone.com — CVE-2026-31789: OpenSSL Buffer Overflow Vulnerability</a></li>
+      <li><a href="https://access.redhat.com/security/cve/cve-2026-31789" target="_blank">access.redhat.com — CVE-2026-31789 (Red Hat Security)</a></li>
+      <li><a href="https://nvd.nist.gov/vuln/detail/cve-2022-48174" target="_blank">nvd.nist.gov — CVE-2022-48174: BusyBox Stack Overflow (reference for CVE-2025-48174 class)</a></li>
+    </ul>
+  </div>
+
+  <!-- ══════ FOOTER ══════ -->
+  <div class="footer">
+    <div><span>PAKNATHUCH WATTANAMONGKOLCHOKE</span> &nbsp;//&nbsp; SENIOR SOFTWARE ENGINEER &nbsp;·&nbsp; <span>SPRING CERTIFIED PROFESSIONAL</span></div>
+    <div style="margin-top:6px">SCOPE: JAVA SPRING BOOT 3 &nbsp;|&nbsp; <span>ALL 4 CVEs RESOLVED</span> &nbsp;|&nbsp; 2026</div>
+    <div style="margin-top:4px;font-size:0.65rem;color:#223333">
+      Data sourced from NVD (nvd.nist.gov) · spring.io Security Advisories · Red Hat Security · SentinelOne
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<!-- ══════ MATRIX RAIN ══════ -->
+<script>
+  (function() {
+    const canvas = document.getElementById('matrix-canvas');
+    const ctx = canvas.getContext('2d');
+    let cols, drops;
+
+    const chars = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホ01アABCDEF0123456789CVE:';
+
+    function resize() {
+      canvas.width  = window.innerWidth;
+      canvas.height = window.innerHeight;
+      cols  = Math.floor(canvas.width / 16);
+      drops = new Array(cols).fill(1);
+    }
+
+    function draw() {
+      ctx.fillStyle = 'rgba(0,0,0,0.05)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.font = '14px "Share Tech Mono", monospace';
+      for (let i = 0; i < cols; i++) {
+        // Alternate cyan and green for matrix feel
+        const isCyan = (i + Math.floor(drops[i] / 5)) % 3 === 0;
+        ctx.fillStyle = isCyan ? '#00e5ff' : '#00ff41';
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * 16, drops[i] * 16);
+        if (drops[i] * 16 > canvas.height && Math.random() > 0.975) drops[i] = 0;
+        drops[i]++;
+      }
+    }
+
+    resize();
+    window.addEventListener('resize', resize);
+    setInterval(draw, 45);
+  })();
+</script>
+
+</body>
+</html>
